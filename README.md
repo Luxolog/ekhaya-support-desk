@@ -2,67 +2,70 @@
 
 A multi-workspace customer support platform by **Ekhaya Technologies**.
 
-## Project status
+## Current implementation
+
+- Next.js App Router, TypeScript and Tailwind CSS.
+- Neon Managed Auth email/password sign-up and sign-in.
+- Automatic workspace creation for the first account.
+- Workspace roles: admin, support agent and customer.
+- Admin can add an already-registered user to a workspace as an agent or customer.
+- Workspace-scoped dashboard and ticket queue.
+- Create tickets, set priority, assign to active team members and update status.
+- Ticket conversation, public replies and private internal notes.
+- Customer portal for customers linked to a workspace to submit requests and follow public replies.
+- Ticket activity audit events.
+
+## Dedicated infrastructure
 
 - Neon project: `ekhaya-support-desk-preview`
-- Database: PostgreSQL 18.7, `neondb`
+- Database: `neondb`
+- App data schema: `support`
 - Authentication: Neon Managed Auth (Better Auth)
-- Production database schema: `support` (nine tables already applied and verified)
-- Application repository: this repository
+- Repository: `Luxolog/ekhaya-support-desk`
 
-## Existing database foundation
+The production `support` schema has already been created and verified. Do not recreate it or modify provider-managed `neon_auth` tables.
 
-The production Neon branch already contains:
+## Local development
 
-- `support.workspaces`
-- `support.workspace_members`
-- `support.customers`
-- `support.tickets`
-- `support.ticket_messages`
-- `support.ticket_attachments`
-- `support.ticket_events`
-- `support.tags`
-- `support.ticket_tags`
-
-The database also contains the managed `neon_auth` schema. Do not recreate, migrate, or modify its managed tables.
-
-## Planned application capabilities
-
-1. Customer sign-up, sign-in, email verification and password recovery.
-2. Workspace administration and membership.
-3. Role-based access: admin, support agent and customer.
-4. Customer ticket submission and ticket history.
-5. Agent queues, assignment, priority and status management.
-6. Public replies and private internal notes.
-7. Attachments, tags and ticket activity history.
-8. Audit-friendly server-side workflows.
-
-## Development setup
-
-The app will use Next.js App Router, TypeScript, Tailwind CSS, Neon Managed Auth and PostgreSQL.
-
-Copy `.env.example` to `.env.local` and populate the values from the dedicated Neon project. Never commit real credentials.
+1. Install Node.js 22 or later.
+2. Copy `.env.example` to `.env.local`.
+3. Add the pooled Neon connection string as `DATABASE_URL`.
+4. Set `NEON_AUTH_BASE_URL` to the dedicated Neon Auth URL.
+5. Generate a strong cookie secret of at least 32 characters for `NEON_AUTH_COOKIE_SECRET`.
+6. Install and run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Required environment variables
+## Environment variables
 
 - `DATABASE_URL`: pooled connection string for the dedicated Support Desk Neon branch.
-- `NEON_AUTH_BASE_URL`: Managed Auth base URL for that branch.
-- `NEON_AUTH_COOKIE_SECRET`: random secret with at least 32 characters.
+- `NEON_AUTH_BASE_URL`: Neon Managed Auth base URL.
+- `NEON_AUTH_COOKIE_SECRET`: random secret (never commit it).
 
-## Security principles
+## First-use flow
 
-- All customer-facing data access must be scoped by workspace on the server.
-- Never trust a workspace ID, role, assignee ID or user ID supplied by the browser without validating it against the authenticated session and membership records.
-- Customers may see only their own tickets and public messages.
-- Internal notes must never be returned to customer-facing queries.
-- Attachments must use private storage and server-authorized upload/download flows.
-- Keep credentials in local environment variables and hosting secrets, never in source control.
+1. Open `/auth/sign-up`.
+2. Create your user account and workspace. The first account in a workspace is its admin.
+3. Register support agents and customers separately.
+4. From the admin dashboard, add each registered email to the workspace with the correct role.
+5. Staff use `/dashboard`; linked customers use `/portal`.
+
+## Current release boundaries
+
+The current MVP does not yet include email notifications, password reset UI, file attachments, inbound email/WhatsApp integrations, billing, or advanced reporting. Email verification is currently disabled in Neon Auth and must be configured with a production email sender before public launch.
+
+## Security
+
+- All application database access is server-side and scoped to the authenticated user's active workspace.
+- Customers can submit and reply only to tickets linked to their own customer profile.
+- Customer conversation queries exclude internal notes.
+- Roles are validated server-side; browser-supplied workspace and user IDs are not trusted.
+- Attachments are not enabled until private object storage and signed download flows are implemented.
+- Keep secrets in host environment settings, never in Git.
 
 ## Deployment boundary
 
-This project is independent. Do not connect it to or deploy it through Ekhaya Price Checker infrastructure. No deployment provider is configured by this repository yet.
+This is a dynamic Next.js application. GitHub Pages can host only the separate static design preview, not this authenticated app with server actions and database access. Deploy the application to a Node.js host. Do not connect this repository to Vercel or to the Ekhaya Price Checker infrastructure.
