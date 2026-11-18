@@ -66,6 +66,24 @@ export async function updateTicketStatusAction(formData: FormData) {
   revalidatePath(`/dashboard/tickets/${id}`);
 }
 
+export async function updateTicketPriorityAction(formData: FormData) {
+  const { user, membership } = await requireMembership();
+  if (!['admin', 'support_agent'].includes(membership.role)) throw new Error('Not permitted.');
+  const id = String(formData.get('ticketId') || '');
+  const priority = String(formData.get('priority') || '');
+  if (!['low', 'normal', 'high', 'urgent'].includes(priority)) throw new Error('Invalid priority.');
+  const previous = await db`select priority from support.tickets where id = ${id} and workspace_id = ${membership.workspace_id} limit 1`;
+  if (!previous.length) throw new Error('Ticket not found.');
+  if (previous[0].priority === priority) return;
+  await db`update support.tickets set priority = ${priority}, updated_at = now() where id = ${id} and workspace_id = ${membership.workspace_id}`;
+  await db`
+    insert into support.ticket_events (ticket_id, actor_user_id, event_type, old_value, new_value)
+    values (${id}, ${user.id}, 'priority_changed', jsonb_build_object('priority', ${previous[0].priority}), jsonb_build_object('priority', ${priority}))
+  `;
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/tickets/${id}`);
+}
+
 export async function addTicketMessageAction(formData: FormData) {
   const { user, membership } = await requireMembership();
   const id = String(formData.get('ticketId') || '');
