@@ -44,3 +44,17 @@ export async function signOutAction() {
   await auth.signOut();
   redirect('/auth/sign-in');
 }
+
+export async function setupWorkspaceAction(formData: FormData) {
+  const { data } = await auth.getSession();
+  if (!data?.user) redirect('/auth/sign-in');
+  const workspaceName = String(formData.get('workspace') || '').trim();
+  if (!workspaceName) throw new Error('Enter a workspace name.');
+  const existing = await db`select workspace_id from support.workspace_members where user_id=${data.user.id} and is_active=true limit 1`;
+  if (existing.length) redirect('/dashboard');
+  const base = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'workspace';
+  const slug = base + '-' + crypto.randomUUID().slice(0, 8);
+  const workspace = await db`insert into support.workspaces (name,slug) values (${workspaceName},${slug}) returning id`;
+  await db`insert into support.workspace_members (workspace_id,user_id,role,is_active) values (${workspace[0].id},${data.user.id},'admin',true)`;
+  redirect('/dashboard');
+}
