@@ -64,8 +64,13 @@ export async function addTicketMessageAction(formData: FormData) {
   const internal = formData.get('internal') === 'on';
   if (!body) throw new Error('Message cannot be empty.');
   if (internal && !['admin','support_agent'].includes(membership.role)) throw new Error('Not permitted.');
-  const ticket = await db`select id from support.tickets where id = ${id} and workspace_id = ${membership.workspace_id} limit 1`;
+  const ticket = await db`
+    select t.id, c.user_id as customer_user_id
+    from support.tickets t join support.customers c on c.id=t.customer_id
+    where t.id = ${id} and t.workspace_id = ${membership.workspace_id} limit 1
+  `;
   if (!ticket.length) throw new Error('Ticket not found.');
+  if (membership.role === 'customer' && (ticket[0].customer_user_id !== user.id || internal)) throw new Error('You can only reply to your own tickets.');
   await db`
     insert into support.ticket_messages (ticket_id, sender_user_id, sender_type, body, is_internal_note)
     values (${id}, ${user.id}, ${membership.role === 'customer' ? 'customer' : 'agent'}, ${body}, ${internal})
