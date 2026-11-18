@@ -79,22 +79,26 @@ export async function addTicketMessageAction(formData: FormData) {
   revalidatePath('/portal');
 }
 
-export async function addAgentAction(formData: FormData) {
+
+export async function addWorkspaceMemberAction(formData: FormData) {
   const { user, membership } = await requireMembership();
-  if (membership.role !== 'admin') throw new Error('Only workspace admins can add team members.');
+  if (membership.role !== 'admin') throw new Error('Only workspace admins can manage members.');
   const email = String(formData.get('email') || '').trim().toLowerCase();
-  if (!email) throw new Error('Enter the team member email.');
-  const found = await db`select id from neon_auth."user" where lower(email)=${email} limit 1`;
-  if (!found.length) throw new Error('That person must create an Ekhaya Support Desk account first. Then add their registered email here.');
+  const role = String(formData.get('role') || 'support_agent');
+  if (!email || !['support_agent','customer'].includes(role)) throw new Error('Enter a valid email and role.');
+  const found = await db`select id, name, email from neon_auth."user" where lower(email)=${email} limit 1`;
+  if (!found.length) throw new Error('That person must register first. Ask them to create an account, then add their registered email here.');
   await db`
     insert into support.workspace_members (workspace_id,user_id,role,is_active)
-    values (${membership.workspace_id},${found[0].id},'support_agent',true)
-    on conflict (workspace_id,user_id) do update set role='support_agent',is_active=true
+    values (${membership.workspace_id},${found[0].id},${role},true)
+    on conflict (workspace_id,user_id) do update set role=excluded.role,is_active=true
   `;
-  await db`
-    insert into support.ticket_events (ticket_id,actor_user_id,event_type,new_value)
-    select t.id,${user.id},'team_member_added',jsonb_build_object('email',${email})
-    from support.tickets t where t.workspace_id=${membership.workspace_id} order by t.created_at desc limit 1
-  `;
+  if (role === 'customer') {
+    await db`
+      insert into support.customers (workspace_id,user_id,display_name,email)
+      values (${membership.workspace_id},${found[0].id},${found[0].name},${found[0].email})
+      on conflict (workspace_id,email) do update set user_id=excluded.user_id,updated_at=now()
+    `;
+  }
   revalidatePath('/dashboard');
 }
