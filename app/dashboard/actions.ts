@@ -101,7 +101,7 @@ export async function addWorkspaceMemberAction(formData: FormData) {
   if (role === 'customer') {
     await db`
       insert into support.customers (workspace_id,user_id,display_name,email)
-      values (${membership.workspace_id},${found[0].id},${found[0].name},${found[0].email})
+      values (${membership.workspace_id},${found[0].id},${found[0].name || found[0].email},${found[0].email})
       on conflict (workspace_id,email) do update set user_id=excluded.user_id,updated_at=now()
     `;
   }
