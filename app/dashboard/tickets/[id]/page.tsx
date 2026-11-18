@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { requireMembership } from '@/lib/workspace';
-import { addTicketMessageAction, updateTicketStatusAction } from '../../actions';
+import { addTicketMessageAction, updateTicketStatusAction, assignTicketAction } from '../../actions';
 import { signOutAction } from '@/app/auth/actions';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export default async function TicketDetailPage({params}:{params:Promise<{id:stri
     from support.ticket_messages m left join neon_auth."user" u on u.id=m.sender_user_id
     where m.ticket_id=${id} order by m.created_at asc
   `;
-  const events=await db`select event_type,created_at from support.ticket_events where ticket_id=${id} order by created_at desc limit 8`;
+  const team=await db\`select u.id,u.name,u.email from support.workspace_members wm join neon_auth.\"user\" u on u.id=wm.user_id where wm.workspace_id=\${membership.workspace_id} and wm.is_active=true and wm.role in ('admin','support_agent') order by u.name\`;\n  const events=await db`select event_type,created_at from support.ticket_events where ticket_id=${id} order by created_at desc limit 8`;
   return <main className="min-h-screen bg-[#f4f6f8]">
     <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4"><div><p className="text-xs font-bold tracking-widest text-[#b88a43]">EKHAYA TECHNOLOGIES</p><p className="font-bold text-[#18324d]">Support Desk</p></div><form action={signOutAction}><button className="rounded-lg border px-3 py-2 text-sm">Sign out</button></form></div></header>
     <div className="mx-auto max-w-5xl space-y-5 px-5 py-8">
@@ -35,6 +35,7 @@ export default async function TicketDetailPage({params}:{params:Promise<{id:stri
         <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[#b88a43]">Ticket #{ticket.ticket_number}</p><h1 className="mt-2 text-2xl font-semibold text-slate-950">{ticket.subject}</h1><p className="mt-1 text-sm text-slate-500">{ticket.customer_name} · {ticket.customer_email}</p></div><span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">{labels[ticket.status]}</span></div>
         <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-700">{ticket.description}</p>
         <div className="mt-5 flex flex-wrap gap-6 border-t border-slate-100 pt-4 text-sm"><span>Priority: <b className="capitalize">{ticket.priority}</b></span><span>Assigned: <b>{ticket.assignee_name || 'Unassigned'}</b></span><span>Source: <b className="capitalize">{ticket.source}</b></span></div>
+        <form action={assignTicketAction} className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4"><input type="hidden" name="ticketId" value={id}/><label className="text-sm font-medium text-slate-600" htmlFor="assignee">Assign to</label><select id="assignee" name="assignee" defaultValue={ticket.assigned_to||''} className="rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Unassigned</option>{team.map((a:any)=><option key={a.id} value={a.id}>{a.name} · {a.email}</option>)}</select><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Save assignment</button></form>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Conversation</h2>
