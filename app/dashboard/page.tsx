@@ -20,7 +20,7 @@ export default async function DashboardPage() {
        left join neon_auth."user" u on u.id=t.assigned_to
        where t.workspace_id=${membership.workspace_id}
        order by t.updated_at desc limit 50`,
-    db`select u.id, u.name, u.email, wm.role from support.workspace_members wm join neon_auth."user" u on u.id=wm.user_id where wm.workspace_id=${membership.workspace_id} and wm.is_active=true order by wm.created_at`
+    db`select u.id, u.name, u.email, wm.role from support.workspace_members wm join neon_auth."user" u on u.id=wm.user_id where wm.workspace_id=${membership.workspace_id} and wm.is_active=true and wm.role in ('admin','support_agent') order by wm.created_at`
   ]);
   const s = stats[0] || {total:0,active:0,waiting:0,resolved:0};
   return (
