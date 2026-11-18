@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth/server';
 import { db } from '@/lib/db';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export type Membership = {
@@ -15,15 +16,18 @@ export type Membership = {
 export async function requireMembership() {
   const { data } = await auth.getSession();
   if (!data?.user) redirect('/auth/sign-in');
-  const rows = await db`
+  const cookieStore = await cookies();
+  const activeWorkspace = cookieStore.get('ekhaya_active_workspace')?.value;
+  const all = await db`
     select wm.workspace_id, w.name as workspace_name, w.slug as workspace_slug,
            wm.role, wm.user_id, u.email, u.name
     from support.workspace_members wm
     join support.workspaces w on w.id = wm.workspace_id
     join neon_auth."user" u on u.id = wm.user_id
     where wm.user_id = ${data.user.id} and wm.is_active = true
-    order by wm.created_at asc limit 1
+    order by wm.created_at asc
   `;
-  if (!rows.length) redirect('/onboarding');
-  return { user: data.user, membership: rows[0] as Membership };
+  if (!all.length) redirect('/onboarding');
+  const membership = (activeWorkspace ? all.find((m:any) => m.workspace_id === activeWorkspace) : null) || all[0];
+  return { user: data.user, membership: membership as Membership, memberships: all as Membership[] };
 }
