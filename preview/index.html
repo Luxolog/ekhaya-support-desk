@@ -39,3 +39,4 @@ function detail(id,subject,customer,priority,status){document.getElementById('de
 function filterRows(){const q=document.getElementById('search').value.toLowerCase();document.querySelectorAll('#ticketTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
 function filterStatus(s){document.querySelectorAll('#ticketTable tbody tr').forEach(r=>r.style.display=(s==='all'||r.dataset.status===s)?'':'none')}
 </script></body></html>
+<!-- GitHub Pages preview refresh -->
