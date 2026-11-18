@@ -78,3 +78,23 @@ export async function addTicketMessageAction(formData: FormData) {
   revalidatePath(`/dashboard/tickets/${id}`);
   revalidatePath('/portal');
 }
+
+export async function addAgentAction(formData: FormData) {
+  const { user, membership } = await requireMembership();
+  if (membership.role !== 'admin') throw new Error('Only workspace admins can add team members.');
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  if (!email) throw new Error('Enter the team member email.');
+  const found = await db`select id from neon_auth."user" where lower(email)=${email} limit 1`;
+  if (!found.length) throw new Error('That person must create an Ekhaya Support Desk account first. Then add their registered email here.');
+  await db`
+    insert into support.workspace_members (workspace_id,user_id,role,is_active)
+    values (${membership.workspace_id},${found[0].id},'support_agent',true)
+    on conflict (workspace_id,user_id) do update set role='support_agent',is_active=true
+  `;
+  await db`
+    insert into support.ticket_events (ticket_id,actor_user_id,event_type,new_value)
+    select t.id,${user.id},'team_member_added',jsonb_build_object('email',${email})
+    from support.tickets t where t.workspace_id=${membership.workspace_id} order by t.created_at desc limit 1
+  `;
+  revalidatePath('/dashboard');
+}
