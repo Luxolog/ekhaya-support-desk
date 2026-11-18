@@ -22,8 +22,17 @@ export async function createTicketAction(formData: FormData) {
     returning id
   `;
   const ticketRows = await db`
-    insert into support.tickets (workspace_id, customer_id, subject, description, priority, source)
-    values (${membership.workspace_id}, ${customerRows[0].id}, ${subject}, ${description}, ${priority}, 'web')
+    with locked_workspace as (
+      select id from support.workspaces where id = ${membership.workspace_id} for update
+    ),
+    next_number as (
+      select coalesce(max(ticket_number), 0) + 1 as ticket_number
+      from support.tickets
+      where workspace_id = (select id from locked_workspace)
+    )
+    insert into support.tickets (workspace_id, ticket_number, customer_id, subject, description, priority, source)
+    select (select id from locked_workspace), next_number.ticket_number, ${customerRows[0].id}, ${subject}, ${description}, ${priority}, 'web'
+    from next_number
     returning id, ticket_number
   `;
   await db`
@@ -117,8 +126,17 @@ export async function createCustomerTicketAction(formData: FormData) {
   const customer=await db`select id from support.customers where workspace_id=${membership.workspace_id} and user_id=${user.id} limit 1`;
   if(!customer.length) throw new Error('Customer profile not found. Contact the workspace administrator.');
   const ticket=await db`
-    insert into support.tickets (workspace_id,customer_id,subject,description,source)
-    values (${membership.workspace_id},${customer[0].id},${subject},${description},'web') returning id
+    with locked_workspace as (
+      select id from support.workspaces where id = ${membership.workspace_id} for update
+    ),
+    next_number as (
+      select coalesce(max(ticket_number), 0) + 1 as ticket_number
+      from support.tickets
+      where workspace_id = (select id from locked_workspace)
+    )
+    insert into support.tickets (workspace_id,ticket_number,customer_id,subject,description,source)
+    select (select id from locked_workspace),next_number.ticket_number,${customer[0].id},${subject},${description},'web'
+    from next_number returning id,ticket_number
   `;
   await db`insert into support.ticket_events (ticket_id,actor_user_id,event_type) values (${ticket[0].id},${user.id},'ticket_created')`;
   revalidatePath('/portal');
