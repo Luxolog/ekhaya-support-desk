@@ -124,3 +124,25 @@ export async function createCustomerTicketAction(formData: FormData) {
   revalidatePath('/portal');
   redirect('/portal');
 }
+
+export async function assignTicketAction(formData: FormData) {
+  const { user, membership } = await requireMembership();
+  if (!['admin','support_agent'].includes(membership.role)) throw new Error('Not permitted.');
+  const id=String(formData.get('ticketId')||'');
+  const assignee=String(formData.get('assignee')||'');
+  const valid=await db`
+    select user_id from support.workspace_members
+    where workspace_id=${membership.workspace_id} and user_id=${assignee}
+      and role in ('admin','support_agent') and is_active=true limit 1
+  `;
+  if(assignee && !valid.length) throw new Error('Select an active member of this workspace.');
+  const ticket=await db`select id,assigned_to from support.tickets where id=${id} and workspace_id=${membership.workspace_id} limit 1`;
+  if(!ticket.length) throw new Error('Ticket not found.');
+  await db`update support.tickets set assigned_to=${assignee||null},updated_at=now() where id=${id} and workspace_id=${membership.workspace_id}`;
+  await db`
+    insert into support.ticket_events (ticket_id,actor_user_id,event_type,old_value,new_value)
+    values (${id},${user.id},'assignment_changed',jsonb_build_object('assigned_to',${ticket[0].assigned_to}),jsonb_build_object('assigned_to',${assignee||null}))
+  `;
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/tickets/${id}`);
+}
