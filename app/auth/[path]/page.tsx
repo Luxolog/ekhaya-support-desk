@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth/server';
 import { AuthForm } from '../auth-form';
 
 export const dynamic = 'force-dynamic';
-export const dynamicParams = false;
 const allowedPaths = ['sign-in', 'sign-up'];
 
 export default async function AuthPage({ params }: { params: Promise<{ path: string }> }) {
