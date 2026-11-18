@@ -107,3 +107,20 @@ export async function addWorkspaceMemberAction(formData: FormData) {
   }
   revalidatePath('/dashboard');
 }
+
+export async function createCustomerTicketAction(formData: FormData) {
+  const { user, membership } = await requireMembership();
+  if (membership.role !== 'customer') throw new Error('Customer account required.');
+  const subject=String(formData.get('subject')||'').trim();
+  const description=String(formData.get('description')||'').trim();
+  if(!subject||!description) throw new Error('Complete the subject and description.');
+  const customer=await db`select id from support.customers where workspace_id=${membership.workspace_id} and user_id=${user.id} limit 1`;
+  if(!customer.length) throw new Error('Customer profile not found. Contact the workspace administrator.');
+  const ticket=await db`
+    insert into support.tickets (workspace_id,customer_id,subject,description,source)
+    values (${membership.workspace_id},${customer[0].id},${subject},${description},'web') returning id
+  `;
+  await db`insert into support.ticket_events (ticket_id,actor_user_id,event_type) values (${ticket[0].id},${user.id},'ticket_created')`;
+  revalidatePath('/portal');
+  redirect('/portal');
+}
