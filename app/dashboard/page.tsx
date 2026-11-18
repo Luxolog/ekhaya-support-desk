@@ -11,7 +11,7 @@ const statusLabel: Record<string,string> = { open:'Open', in_progress:'In progre
 const statusClass: Record<string,string> = { open:'bg-blue-50 text-blue-700', in_progress:'bg-amber-50 text-amber-700', waiting_on_customer:'bg-violet-50 text-violet-700', resolved:'bg-emerald-50 text-emerald-700', closed:'bg-slate-100 text-slate-600' };
 
 export default async function DashboardPage() {
-  const { user, membership } = await requireMembership();
+  const { user, membership, memberships } = await requireMembership();
   if (membership.role === 'customer') return <main className="p-10"><p>Customer account</p><Link href="/portal">Open customer portal</Link></main>;
   const [stats, tickets, agents] = await Promise.all([
     db`select count(*)::int as total, count(*) filter (where status in ('open','in_progress'))::int as active, count(*) filter (where status='waiting_on_customer')::int as waiting, count(*) filter (where status in ('resolved','closed'))::int as resolved from support.tickets where workspace_id=${membership.workspace_id}`,
@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     <main className="min-h-screen bg-[#f4f6f8]">
       <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-5">
         <div><p className="text-xs font-bold tracking-[.16em] text-[#b88a43]">EKHAYA TECHNOLOGIES</p><h1 className="text-xl font-bold text-[#18324d]">Support Desk</h1></div>
-        <div className="flex items-center gap-4 text-sm"><div className="text-right"><p className="font-semibold text-slate-800">{membership.workspace_name}</p><p className="text-slate-500">{user.email} · {membership.role}</p></div><form action={signOutAction}><button className="rounded-lg border border-slate-300 px-3 py-2">Sign out</button></form></div>
+        <div className="flex items-center gap-4 text-sm"><div className="text-right"><p className="font-semibold text-slate-800">{membership.workspace_name}</p><p className="text-slate-500">{user.email} · {membership.role}</p></div>{memberships.length > 1 && <Link href="/workspaces" className="rounded-lg border border-slate-300 px-3 py-2">Switch workspace</Link>}<form action={signOutAction}><button className="rounded-lg border border-slate-300 px-3 py-2">Sign out</button></form></div>
       </div></header>
       <div className="mx-auto max-w-7xl space-y-6 px-5 py-8">
         <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[#245b83]">Workspace overview</p><h2 className="mt-1 text-3xl font-semibold text-slate-950">Good day, {user.name || 'there'}</h2><p className="mt-1 text-slate-500">Manage customer requests and keep every conversation moving.</p></div>
