@@ -211,6 +211,19 @@ export async function manageWorkspaceMemberAction(formData: FormData) {
       if (admins[0].total <= 1) throw new Error('A workspace must keep at least one active administrator.');
     }
     await db`
+      insert into support.ticket_events (ticket_id, actor_user_id, event_type, old_value, new_value)
+      select t.id, ${user.id}, 'assignment_changed',
+             jsonb_build_object('assigned_to', ${memberId}),
+             jsonb_build_object('assigned_to', null, 'reason', 'member_deactivated')
+      from support.tickets t
+      where t.workspace_id = ${membership.workspace_id} and t.assigned_to = ${memberId}
+    `;
+    await db`
+      update support.tickets
+      set assigned_to = null, updated_at = now()
+      where workspace_id = ${membership.workspace_id} and assigned_to = ${memberId}
+    `;
+    await db`
       update support.workspace_members
       set is_active = false
       where workspace_id = ${membership.workspace_id} and user_id = ${memberId}
