@@ -92,4 +92,5 @@ Nginx should proxy HTTPS requests to `http://127.0.0.1:3000`, forward the origin
 - Apply security updates and monitor disk, memory, CPU and application logs.
 - Configure off-server backups for any server-local data. Ticket data remains in Neon; do not create a second application database.
 - Configure a dedicated production auth email sender and test deliverability before public launch.
-- Do not deploy this project to Vercel or connect it to the Ekhaya Price Checker project or database.
+- Vercel is also an approved deployment target for the dedicated `Luxolog/ekhaya-support-desk` repository. If Vercel is used, configure only the dedicated Support Desk Neon variables and keep it fully separate from Ekhaya Price Checker.
+- Do not connect this project to the Ekhaya Price Checker project, repository, Supabase project or credentials.
