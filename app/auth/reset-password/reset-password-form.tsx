@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { authClient } from '@/lib/auth/client';
 
@@ -10,10 +10,6 @@ export function ResetPasswordForm({ token, invalid }: { token: string; invalid: 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    if (token || invalid) window.history.replaceState({}, '', window.location.pathname);
-  }, [token, invalid]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +33,7 @@ export function ResetPasswordForm({ token, invalid }: { token: string; invalid: 
         setError('The reset link may have expired. Request a new password reset link and try again.');
       } else {
         setSuccess(true);
+        window.history.replaceState({}, '', window.location.pathname);
         setPassword('');
         setConfirm('');
       }
