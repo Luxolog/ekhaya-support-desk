@@ -29,26 +29,15 @@ export async function requireMembership() {
     order by wm.created_at asc
   `;
 
-  if (!all.length) {
-    cookieStore.delete('ekhaya_active_workspace');
-    redirect('/onboarding');
-  }
+  if (!all.length) redirect('/onboarding');
 
   const selected = activeWorkspace
     ? all.find((item: any) => item.workspace_id === activeWorkspace)
     : undefined;
 
-  // Repair stale or forged workspace cookies by selecting a verified membership.
+  // Never mutate cookies from a Server Component. A stale or forged cookie
+  // falls back to the first membership verified by the database.
   const membership = selected || all[0];
-  if (!selected) {
-    cookieStore.set('ekhaya_active_workspace', membership.workspace_id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-  }
 
   return {
     user: data.user,
