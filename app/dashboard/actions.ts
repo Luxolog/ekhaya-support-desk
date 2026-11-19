@@ -15,7 +15,7 @@ export async function createTicketAction(formData: FormData) {
   const priority = String(formData.get('priority') || 'normal');
   if (!subject || !description || !customerName || !customerEmail) throw new Error('Complete all required ticket fields.');
   if (subject.length > 180 || description.length > 10000 || customerName.length > 160 || customerEmail.length > 320) throw new Error('One or more fields exceed the allowed length.');
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(customerEmail)) throw new Error('Enter a valid customer email address.');
+  if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(customerEmail)) throw new Error('Enter a valid customer email address.');
   if (!['low','normal','high','urgent'].includes(priority)) throw new Error('Invalid priority.');
   const customerRows = await db`
     insert into support.customers (workspace_id, display_name, email)
@@ -160,7 +160,7 @@ export async function addWorkspaceMemberAction(formData: FormData) {
   if (membership.role !== 'admin') throw new Error('Only workspace admins can manage members.');
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const role = String(formData.get('role') || 'support_agent');
-  if (!email || email.length > 320 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !['support_agent','customer'].includes(role)) throw new Error('Enter a valid email and role.');
+  if (!email || email.length > 320 || !/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email) || !['support_agent','customer'].includes(role)) throw new Error('Enter a valid email and role.');
   const found = await db`select id, name, email from neon_auth."user" where lower(email)=${email} limit 1`;
   if (!found.length) throw new Error('That person must register first. Ask them to create an account, then add their registered email here.');
   await db`
