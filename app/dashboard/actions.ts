@@ -156,7 +156,7 @@ export async function addTicketMessageAction(formData: FormData) {
 }
 
 export async function addWorkspaceMemberAction(formData: FormData) {
-  const { user, membership } = await requireMembership();
+  const { membership } = await requireMembership();
   if (membership.role !== 'admin') throw new Error('Only workspace admins can manage members.');
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const role = String(formData.get('role') || 'support_agent');
