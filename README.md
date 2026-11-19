@@ -8,8 +8,8 @@ A multi-workspace customer support platform by **Ekhaya Technologies**.
 - Neon Managed Auth email/password sign-up and sign-in.
 - Automatic workspace creation for the first account.
 - Workspace roles: admin, support agent and customer.
-- Admin can add an already-registered user to a workspace as an agent or customer.
-- Workspace-scoped dashboard and ticket queue.
+- Admin can add registered users, change workspace roles and deactivate members while preserving at least one active admin.
+- Workspace-scoped dashboard and searchable/filterable ticket queue (status, priority, assignee and customer/ticket search).
 - Create tickets, set priority, assign to active team members and update status.
 - Ticket conversation, public replies and private internal notes.
 - Customer portal for customers linked to a workspace to submit requests and follow public replies.
@@ -55,7 +55,7 @@ npm run dev
 
 ## Current release boundaries
 
-The current MVP does not yet include email notifications, password reset UI, file attachments, inbound email/WhatsApp integrations, billing, or advanced reporting. Email verification is currently disabled in Neon Auth and must be configured with a production email sender before public launch.
+The current MVP does not yet include password reset UI, file attachments, inbound email/WhatsApp integrations, billing, or advanced reporting. Automated email notifications are not implemented. Email verification is currently disabled in Neon Auth and must be configured with a production email sender before public launch.
 
 ## Security
 
@@ -63,6 +63,9 @@ The current MVP does not yet include email notifications, password reset UI, fil
 - Customers can submit and reply only to tickets linked to their own customer profile.
 - Customer conversation queries exclude internal notes.
 - Roles are validated server-side; browser-supplied workspace and user IDs are not trusted.
+- Workspace selection is resolved against active memberships and stale workspace cookies are repaired.
+- Customer message writes verify ticket ownership on the server and reject private-note attempts.
+- Member administration is admin-only and prevents deactivating or demoting the final active administrator.
 - Attachments are not enabled until private object storage and signed download flows are implemented.
 - Keep secrets in host environment settings, never in Git.
 
