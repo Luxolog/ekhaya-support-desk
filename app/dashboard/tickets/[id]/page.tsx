@@ -6,10 +6,14 @@ import { addTicketMessageAction, updateTicketStatusAction, updateTicketPriorityA
 import { signOutAction } from '@/app/auth/actions';
 
 export const dynamic = 'force-dynamic';
+type TicketTeamMember = { id: string; name: string | null; email: string };
+type TicketMessage = { id: string; body: string; sender_type: string; is_internal_note: boolean; created_at: Date | string; sender_name: string | null };
+type TicketEvent = { event_type: string; created_at: Date | string };
+
 const labels: Record<string,string> = {open:'Open',in_progress:'In progress',waiting_on_customer:'Waiting on customer',resolved:'Resolved',closed:'Closed'};
 
 export default async function TicketDetailPage({params}:{params:Promise<{id:string}>}) {
-  const {user,membership}=await requireMembership();
+  const {membership}=await requireMembership();
   if(membership.role==='customer') redirect('/portal');
   const {id}=await params;
   const rows=await db`
@@ -44,15 +48,15 @@ export default async function TicketDetailPage({params}:{params:Promise<{id:stri
           </select>
           <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Save priority</button>
         </form>
-        <form action={assignTicketAction} className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4"><input type="hidden" name="ticketId" value={id}/><label className="text-sm font-medium text-slate-600" htmlFor="assignee">Assign to</label><select id="assignee" name="assignee" defaultValue={ticket.assigned_to||''} className="rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Unassigned</option>{team.map((a:any)=><option key={a.id} value={a.id}>{a.name} · {a.email}</option>)}</select><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Save assignment</button></form>
+        <form action={assignTicketAction} className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4"><input type="hidden" name="ticketId" value={id}/><label className="text-sm font-medium text-slate-600" htmlFor="assignee">Assign to</label><select id="assignee" name="assignee" defaultValue={ticket.assigned_to||''} className="rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Unassigned</option>{team.map((a: TicketTeamMember)=><option key={a.id} value={a.id}>{a.name} · {a.email}</option>)}</select><button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Save assignment</button></form>
       </section>
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Conversation</h2><form action={updateTicketStatusAction} className="flex items-center gap-2"><input type="hidden" name="ticketId" value={id}/><select name="status" defaultValue={ticket.status} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">{Object.entries(labels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select><button className="rounded-lg bg-[#18324d] px-3 py-2 text-sm font-semibold text-white">Update status</button></form></div>
-        <div className="mt-5 space-y-3">{messages.map((m:any)=><article key={m.id} className={`rounded-xl p-4 ${m.is_internal_note?'border border-amber-200 bg-amber-50':m.sender_type==='agent'?'bg-blue-50':'bg-slate-50'}`}><div className="flex flex-wrap justify-between gap-2 text-xs text-slate-500"><b>{m.sender_name || m.sender_type}{m.is_internal_note?' · INTERNAL NOTE':''}</b><time>{new Date(m.created_at).toLocaleString()}</time></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{m.body}</p></article>)}
+        <div className="mt-5 space-y-3">{messages.map((m: TicketMessage)=><article key={m.id} className={`rounded-xl p-4 ${m.is_internal_note?'border border-amber-200 bg-amber-50':m.sender_type==='agent'?'bg-blue-50':'bg-slate-50'}`}><div className="flex flex-wrap justify-between gap-2 text-xs text-slate-500"><b>{m.sender_name || m.sender_type}{m.is_internal_note?' · INTERNAL NOTE':''}</b><time>{new Date(m.created_at).toLocaleString()}</time></div><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{m.body}</p></article>)}
         {messages.length===0&&<p className="rounded-lg bg-slate-50 p-5 text-sm text-slate-500">No replies yet. Send the first response below.</p>}</div>
         <form action={addTicketMessageAction} className="mt-6 border-t border-slate-100 pt-5"><input type="hidden" name="ticketId" value={id}/><label className="text-sm font-semibold text-slate-700">Write a reply or internal note<textarea name="body" required rows={4} className="mt-2 block w-full rounded-lg border border-slate-300 p-3 font-normal" placeholder="Type your message…"/></label><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" name="internal"/> Add as private internal note</label><button className="rounded-lg bg-[#18324d] px-5 py-2.5 font-semibold text-white">Send message</button></div></form>
       </section>
-      <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="font-semibold">Recent activity</h2><div className="mt-3 space-y-2">{events.map((e:any,i:number)=><p key={i} className="flex justify-between gap-3 text-sm text-slate-600"><span>{String(e.event_type).replaceAll('_',' ')}</span><time className="text-xs text-slate-400">{new Date(e.created_at).toLocaleString()}</time></p>)}</div></section>
+      <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="font-semibold">Recent activity</h2><div className="mt-3 space-y-2">{events.map((e: TicketEvent,i:number)=><p key={i} className="flex justify-between gap-3 text-sm text-slate-600"><span>{String(e.event_type).replaceAll('_',' ')}</span><time className="text-xs text-slate-400">{new Date(e.created_at).toLocaleString()}</time></p>)}</div></section>
     </div>
   </main>;
 }
