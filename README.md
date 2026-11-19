@@ -22,12 +22,13 @@ A multi-workspace customer support platform by **Ekhaya Technologies**.
 - App data schema: `support`
 - Authentication: Neon Managed Auth (Better Auth)
 - Repository: `Luxolog/ekhaya-support-desk`
+- Vercel project: `ekhaya-support-desk-app` (dedicated project; deployment preparation in progress)
 
 The production `support` schema has already been created and verified. Do not recreate it or modify provider-managed `neon_auth` tables.
 
 ## Local development
 
-1. Install Node.js 22 or later.
+1. Install Node.js 22 LTS.
 2. Copy `.env.example` to `.env.local`.
 3. Add the pooled Neon connection string as `DATABASE_URL`.
 4. Set `NEON_AUTH_BASE_URL` to the dedicated Neon Auth URL.
@@ -69,6 +70,10 @@ The current MVP now includes password reset request and token-based password upd
 - Attachments are not enabled until private object storage and signed download flows are implemented.
 - Keep secrets in host environment settings, never in Git.
 
-## Deployment boundary
+## Deployment
 
-This is a dynamic Next.js application. GitHub Pages can host only the separate static design preview, not this authenticated app with server actions and database access. Deploy the application to a Node.js host. Do not connect this repository to Vercel or to the Ekhaya Price Checker infrastructure.
+This is a dynamic Next.js application. GitHub Pages can host only the separate static design preview, not this authenticated app with server actions and database access.
+
+Vercel is an approved deployment target for this dedicated Support Desk repository. The Vercel project must use only the `Luxolog/ekhaya-support-desk` repository and the dedicated Support Desk Neon project. Never connect it to the Ekhaya Price Checker repository, Supabase project, or credentials.
+
+Domains.co.za Linux VPS remains an alternative Node.js hosting option. Do not change DNS or purchase hosting until the owner selects a production hostname and approves the hosting plan.
