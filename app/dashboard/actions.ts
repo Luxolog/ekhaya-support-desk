@@ -178,6 +178,77 @@ export async function addWorkspaceMemberAction(formData: FormData) {
   revalidatePath('/dashboard');
 }
 
+
+export async function manageWorkspaceMemberAction(formData: FormData) {
+  const { user, membership } = await requireMembership();
+  if (membership.role !== 'admin') throw new Error('Only workspace admins can manage members.');
+
+  const memberId = String(formData.get('memberId') || '');
+  const memberAction = String(formData.get('memberAction') || 'update_role');
+  const role = String(formData.get('role') || '');
+
+  if (!memberId || memberId === user.id) {
+    throw new Error('You cannot change your own workspace membership here.');
+  }
+
+  const target = await db`
+    select user_id, role, is_active
+    from support.workspace_members
+    where workspace_id = ${membership.workspace_id} and user_id = ${memberId}
+    limit 1
+  `;
+  if (!target.length) throw new Error('Workspace member not found.');
+
+  if (memberAction === 'deactivate') {
+    if (!target[0].is_active) return;
+    if (target[0].role === 'admin') {
+      const admins = await db`
+        select count(*)::int as total
+        from support.workspace_members
+        where workspace_id = ${membership.workspace_id}
+          and role = 'admin' and is_active = true
+      `;
+      if (admins[0].total <= 1) throw new Error('A workspace must keep at least one active administrator.');
+    }
+    await db`
+      update support.workspace_members
+      set is_active = false
+      where workspace_id = ${membership.workspace_id} and user_id = ${memberId}
+    `;
+  } else {
+    if (!['admin', 'support_agent', 'customer'].includes(role)) {
+      throw new Error('Choose a valid workspace role.');
+    }
+    if (target[0].role === 'admin' && role !== 'admin') {
+      const admins = await db`
+        select count(*)::int as total
+        from support.workspace_members
+        where workspace_id = ${membership.workspace_id}
+          and role = 'admin' and is_active = true
+      `;
+      if (admins[0].total <= 1) throw new Error('A workspace must keep at least one active administrator.');
+    }
+    await db`
+      update support.workspace_members
+      set role = ${role}, is_active = true
+      where workspace_id = ${membership.workspace_id} and user_id = ${memberId}
+    `;
+    if (role === 'customer') {
+      await db`
+        insert into support.customers (workspace_id, user_id, display_name, email)
+        select ${membership.workspace_id}, u.id, coalesce(u.name, u.email), u.email
+        from neon_auth."user" u
+        where u.id = ${memberId}
+        on conflict (workspace_id, email)
+        do update set user_id = excluded.user_id, updated_at = now()
+      `;
+    }
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/portal');
+}
+
 export async function createCustomerTicketAction(formData: FormData) {
   const { user, membership } = await requireMembership();
   if (membership.role !== 'customer') throw new Error('Customer account required.');
