@@ -16,6 +16,7 @@ export type Membership = {
 export async function requireMembership() {
   const { data } = await auth.getSession();
   if (!data?.user) redirect('/auth/sign-in');
+
   const cookieStore = await cookies();
   const activeWorkspace = cookieStore.get('ekhaya_active_workspace')?.value;
   const all = await db`
@@ -27,7 +28,31 @@ export async function requireMembership() {
     where wm.user_id = ${data.user.id} and wm.is_active = true
     order by wm.created_at asc
   `;
-  if (!all.length) redirect('/onboarding');
-  const membership = (activeWorkspace ? all.find((m:any) => m.workspace_id === activeWorkspace) : null) || all[0];
-  return { user: data.user, membership: membership as Membership, memberships: all as Membership[] };
+
+  if (!all.length) {
+    cookieStore.delete('ekhaya_active_workspace');
+    redirect('/onboarding');
+  }
+
+  const selected = activeWorkspace
+    ? all.find((item: any) => item.workspace_id === activeWorkspace)
+    : undefined;
+
+  // Repair stale or forged workspace cookies by selecting a verified membership.
+  const membership = selected || all[0];
+  if (!selected) {
+    cookieStore.set('ekhaya_active_workspace', membership.workspace_id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+
+  return {
+    user: data.user,
+    membership: membership as Membership,
+    memberships: all as Membership[],
+  };
 }
