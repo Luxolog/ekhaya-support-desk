@@ -31,8 +31,9 @@ export async function requireMembership() {
 
   if (!all.length) redirect('/onboarding');
 
+  const memberships = all as Membership[];
   const selected = activeWorkspace
-    ? all.find((item: any) => item.workspace_id === activeWorkspace)
+    ? memberships.find((item) => item.workspace_id === activeWorkspace)
     : undefined;
 
   // Never mutate cookies from a Server Component. A stale or forged cookie
@@ -42,6 +43,6 @@ export async function requireMembership() {
   return {
     user: data.user,
     membership: membership as Membership,
-    memberships: all as Membership[],
+    memberships,
   };
 }
