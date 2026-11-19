@@ -63,7 +63,7 @@ The current MVP now includes password reset request and token-based password upd
 - Customers can submit and reply only to tickets linked to their own customer profile.
 - Customer conversation queries exclude internal notes.
 - Roles are validated server-side; browser-supplied workspace and user IDs are not trusted.
-- Workspace selection is resolved against active memberships and stale workspace cookies are repaired.
+- Workspace selection is resolved against active memberships; stale or forged workspace cookies fall back to a verified membership without mutating cookies during server rendering.
 - Customer message writes verify ticket ownership on the server and reject private-note attempts.
 - Member administration is admin-only and prevents deactivating or demoting the final active administrator.
 - Attachments are not enabled until private object storage and signed download flows are implemented.
