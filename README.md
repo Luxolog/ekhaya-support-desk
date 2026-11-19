@@ -5,7 +5,7 @@ A multi-workspace customer support platform by **Ekhaya Technologies**.
 ## Current implementation
 
 - Next.js App Router, TypeScript and Tailwind CSS.
-- Neon Managed Auth email/password sign-up and sign-in.
+- Neon Managed Auth email/password sign-up, sign-in, password reset and session handling.
 - Automatic workspace creation for the first account.
 - Workspace roles: admin, support agent and customer.
 - Admin can add registered users, change workspace roles and deactivate members while preserving at least one active admin.
@@ -55,7 +55,7 @@ npm run dev
 
 ## Current release boundaries
 
-The current MVP does not yet include password reset UI, file attachments, inbound email/WhatsApp integrations, billing, or advanced reporting. Automated email notifications are not implemented. Email verification is currently disabled in Neon Auth and must be configured with a production email sender before public launch.
+The current MVP now includes password reset request and token-based password update screens. File attachments, inbound email/WhatsApp integrations, billing, and advanced reporting remain out of scope for this MVP. Automated email notifications are not implemented. Email verification is currently disabled in Neon Auth. The current branch uses Neon's shared email sender for auth messages; configure a dedicated production sender and trusted application origin before public launch.
 
 ## Security
 
