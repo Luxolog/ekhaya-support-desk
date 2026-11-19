@@ -89,28 +89,69 @@ export async function addTicketMessageAction(formData: FormData) {
   const id = String(formData.get('ticketId') || '');
   const body = String(formData.get('body') || '').trim();
   const internal = formData.get('internal') === 'on';
-  if (!body) throw new Error('Message cannot be empty.');
-  if (internal && !['admin','support_agent'].includes(membership.role)) throw new Error('Not permitted.');
+
+  if (!id || !body) throw new Error('Ticket and message are required.');
+  if (body.length > 10000) throw new Error('Messages must be 10,000 characters or fewer.');
+  if (internal && !['admin', 'support_agent'].includes(membership.role)) {
+    throw new Error('Not permitted.');
+  }
+
   const ticket = await db`
-    select t.id, c.user_id as customer_user_id
-    from support.tickets t join support.customers c on c.id=t.customer_id
-    where t.id = ${id} and t.workspace_id = ${membership.workspace_id} limit 1
+    select t.id, t.status, c.user_id as customer_user_id
+    from support.tickets t
+    join support.customers c
+      on c.id = t.customer_id and c.workspace_id = t.workspace_id
+    where t.id = ${id}
+      and t.workspace_id = ${membership.workspace_id}
+    limit 1
   `;
+
   if (!ticket.length) throw new Error('Ticket not found.');
-  if (membership.role === 'customer' && (ticket[0].customer_user_id !== user.id || internal)) throw new Error('You can only reply to your own tickets.');
+  if (membership.role === 'customer') {
+    if (ticket[0].customer_user_id !== user.id || internal) {
+      throw new Error('You can only reply to your own tickets.');
+    }
+  } else if (!['admin', 'support_agent'].includes(membership.role)) {
+    throw new Error('Not permitted.');
+  }
+
   await db`
-    insert into support.ticket_messages (ticket_id, sender_user_id, sender_type, body, is_internal_note)
-    values (${id}, ${user.id}, ${membership.role === 'customer' ? 'customer' : 'agent'}, ${body}, ${internal})
+    insert into support.ticket_messages
+      (ticket_id, sender_user_id, sender_type, body, is_internal_note)
+    values (
+      ${id},
+      ${user.id},
+      ${membership.role === 'customer' ? 'customer' : 'agent'},
+      ${body},
+      ${internal}
+    )
   `;
-  await db`update support.tickets set updated_at = now() where id = ${id}`;
+
+  await db`
+    update support.tickets
+    set updated_at = now(),
+        status = case
+          when ${membership.role === 'customer'} and status = 'waiting_on_customer'
+            then 'in_progress'
+          else status
+        end
+    where id = ${id} and workspace_id = ${membership.workspace_id}
+  `;
+
   await db`
     insert into support.ticket_events (ticket_id, actor_user_id, event_type, new_value)
-    values (${id}, ${user.id}, ${internal ? 'internal_note_added' : 'reply_added'}, jsonb_build_object('message','added'))
+    values (
+      ${id},
+      ${user.id},
+      ${internal ? 'internal_note_added' : 'reply_added'},
+      jsonb_build_object('message', 'added')
+    )
   `;
+
   revalidatePath(`/dashboard/tickets/${id}`);
+  revalidatePath('/dashboard');
   revalidatePath('/portal');
 }
-
 
 export async function addWorkspaceMemberAction(formData: FormData) {
   const { user, membership } = await requireMembership();
