@@ -14,6 +14,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       {signup && <Field label="Workspace name" name="workspace" placeholder="Your business or team" />}
       <Field label="Email address" name="email" type="email" placeholder="you@company.com" />
       <Field label="Password" name="password" type="password" placeholder="At least 8 characters" />
+      {!signup && <p className="text-right text-sm"><Link className="font-semibold text-[#245b83] underline" href="/auth/forgot-password">Forgot password?</Link></p>}
       {state?.error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</p>}
       <button disabled={pending} className="w-full rounded-lg bg-[#18324d] px-4 py-3 font-semibold text-white hover:bg-[#244b70] disabled:opacity-60">
         {pending ? 'Please wait…' : signup ? 'Create workspace' : 'Sign in'}
