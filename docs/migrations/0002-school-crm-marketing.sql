@@ -78,3 +78,6 @@ CREATE TABLE support.ai_usage (
  created_by uuid REFERENCES neon_auth."user"(id) ON DELETE SET NULL, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ai_usage_workspace_created_idx ON support.ai_usage(workspace_id,created_at DESC);
+
+-- Supports efficient per-lead, per-channel consent state lookups (latest event wins).
+CREATE INDEX marketing_consents_workspace_lead_channel_idx ON support.marketing_consents(workspace_id,lead_id,channel,recorded_at DESC,id DESC);

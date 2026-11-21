@@ -2,24 +2,32 @@
 Branch: `feature/school-support-marketing-pilot`
 
 ## Delivered on this branch
-- Workspace-scoped lead CRM with statuses, follow-up dates, consent flag, private activity notes and event history.
-- Workspace organisation profile and department management.
-- Knowledge article drafts, editing, admin publishing and archiving.
-- Campaign drafting, submission for admin approval, and approval/return/cancel workflow. Campaigns are not sent.
-- Workspace-scoped operational reporting for leads, follow-ups, tickets and campaign workflow, including six-month lead volume.
-- Deterministic mock AI provider foundation. It is not a live AI service and does not send messages.
-- Additive migration proposal at `docs/migrations/0002-school-crm-marketing.sql`.
+- Workspace-scoped lead CRM, follow-up tracking, internal notes and lead event history.
+- Explicit, channel-specific marketing consent capture for email, WhatsApp and SMS, with recorded consent wording, source, actor and timestamp.
+- Channel-specific consent withdrawal recorded as a new audit row; earlier consent evidence is retained.
+- New enquiry capture defaults to no marketing consent. A general enquiry checkbox cannot grant blanket consent.
+- Workspace organisation settings, department management and knowledge article drafts/publishing.
+- Campaign drafts and internal admin content approval. Approval is not a send authorization; no message delivery exists.
+- Workspace-scoped reporting for leads, follow-ups, tickets and campaign states.
+- Deterministic mock AI provider foundation; no live AI calls or message sending.
 
 ## Database and deployment
-- Migration was syntax/DDL validated on a temporary Neon branch. It has NOT been applied to production.
-- These routes require the proposed tables, so they will not operate against a database that has not had the reviewed migration applied.
-- No production database changes, Vercel deployment, external provider connection or message delivery was performed.
-- Development remains GitHub-only on this feature branch.
+- Additive migration proposal: `docs/migrations/0002-school-crm-marketing.sql`.
+- Migration was syntax/DDL validated on a temporary Neon branch and has NOT been applied to production.
+- New modules require the proposed schema before they can run against a database that lacks those tables.
+- GitHub-only development. No Vercel deployment, production migration or external provider setup has been performed.
 
-## Guardrails and outstanding work
-- All CRM, campaign and report reads/writes must remain scoped to the authenticated workspace.
-- Campaign workflow is planning/approval only. No delivery provider, audience selector, consent-filtered recipient export or send action exists.
-- Before any sending feature: implement consent capture/withdrawal, channel-specific suppression, unsubscribe handling, recipient preview, audit trail, rate limits and provider configuration.
-- Public intake endpoints need abuse prevention, validation and privacy notices before release.
-- POPIA compliance is not claimed. Retention, data-subject request processes, operator agreements and organisation-specific legal review remain required.
-- Automated email/WhatsApp/SMS, live AI, lead assignment, CSV export, subscription entitlements and end-to-end tests with real accounts remain outstanding.
+## Security and privacy guardrails
+- All lead, consent and campaign reads/writes are scoped to the authenticated active workspace.
+- Consent is captured per channel, with the exact consent statement and source stored for audit.
+- Withdrawal is append-only and does not erase the historical grant.
+- Campaign approval is content review only. No recipient selection, export or sending endpoint exists.
+- Before delivery is implemented, require a final recipient-level consent/suppression check at send time, unsubscribe/opt-out handling, provider configuration, audit logs, rate limits and a human-confirmed recipient preview.
+- Public intake needs anti-abuse controls, validation and a privacy notice before release.
+- POPIA compliance is not claimed; retention, data-subject request processes, operator agreements and organisation-specific legal review remain outstanding.
+
+## Outstanding
+- Consent management for existing customer records and a dedicated consent audit/report view.
+- Recipient-level suppression and send-time revalidation, once a delivery provider is selected.
+- Lead assignment, CSV export, public intake and real provider integrations.
+- End-to-end tests with real staff/customer accounts and a reviewed production migration.
