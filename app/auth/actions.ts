@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth/server';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 
-const EMAIL_PATTERN = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_PASSWORD_LENGTH = 128;
 
 function validEmail(email: string) {
