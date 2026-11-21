@@ -10,27 +10,28 @@ Branch: `feature/school-support-marketing-pilot`
 - Campaign drafts and internal admin content approval. Approval is not a send authorization; no message delivery exists.
 - Workspace-scoped reporting for leads, follow-ups, tickets and campaign states.
 - Dedicated consent audit page with append-only event history and staff/source/evidence details.
-- Campaign-level, non-sending recipient eligibility counts split between leads and existing customers, based on the latest channel-specific consent event and matching contact field. Withdrawn, unknown and missing-contact records are excluded.
+- Campaign-level, non-sending recipient eligibility counts split between leads and existing customers, based on the latest channel-specific consent event and matching contact field.
+- Self-service unsubscribe confirmation page and one-time token POST endpoint. Tokens are random, stored as hashes, expire, are single-use, and are bound to the exact consent event they may withdraw.
 - Deterministic mock AI provider foundation; no live AI calls or message sending.
 
 ## Database and deployment
-- Additive migration proposal: `docs/migrations/0002-school-crm-marketing.sql`.
-- Migration was syntax/DDL validated on a temporary Neon branch and has NOT been applied to production.
+- Additive migration proposals: `docs/migrations/0002-school-crm-marketing.sql` and `docs/migrations/0003-marketing-unsubscribe.sql`.
+- Migration 0002 was syntax/DDL validated on a temporary Neon branch and has NOT been applied to production. Migration 0003 has not yet been applied or validated against production.
 - New modules require the proposed schema before they can run against a database that lacks those tables.
 - GitHub-only development. No Vercel deployment, production migration or external provider setup has been performed.
 
 ## Security and privacy guardrails
-- All lead, consent and campaign reads/writes are scoped to the authenticated active workspace.
-- Consent is captured per channel, with the exact consent statement and source stored for audit.
-- Withdrawal is append-only and does not erase the historical grant.
+- All staff reads/writes are scoped to the authenticated active workspace.
+- Consent is captured per channel; withdrawal is append-only and does not erase historical evidence.
 - The consent audit view is staff-only; customer roles are denied.
-- Recipient preview counts separately use the latest event per lead/channel and customer/channel, require the matching email/phone field, and remain workspace-scoped. The preview exposes counts only, not recipient contact data.
+- Recipient preview counts separately use the latest event per lead/channel and customer/channel, require the matching contact field, and remain workspace-scoped. The preview exposes counts only.
+- Unsubscribe GET is read-only. Explicit POST claims a hashed, expiring, one-time token and can withdraw only the exact consent event for which it was issued.
 - Campaign approval is content review only. No recipient export or sending endpoint exists.
-- Before delivery is implemented, require a final recipient-level consent/suppression check at send time, unsubscribe/opt-out handling, provider configuration, audit logs, rate limits and a human-confirmed recipient preview.
-- Public intake needs anti-abuse controls, validation and a privacy notice before release.
+- Before delivery: require send-time recipient-level consent/suppression revalidation, provider configuration, audit logs, rate limits and a human-confirmed recipient preview. Edge rate limiting and provider link-scanner validation remain outstanding.
 - POPIA compliance is not claimed; retention, data-subject request processes, operator agreements and organisation-specific legal review remain outstanding.
 
 ## Verification and outstanding
-- `docs/CONSENT-SECURITY-TESTS.md` defines two-workspace isolation, role, tampered-ID and consent-state test cases. These are a manual test plan, not completed authenticated end-to-end tests.
+- `docs/CONSENT-SECURITY-TESTS.md` defines two-workspace isolation, role, tampered-ID, consent-state and unsubscribe test cases. These are a manual test plan, not completed authenticated end-to-end tests.
+- Token issuance helper is not wired into a sending adapter because delivery is disabled.
 - Lead assignment, CSV export, public intake and real provider integrations remain outstanding.
 - End-to-end tests with real staff/customer accounts and a reviewed production migration remain release blockers.
