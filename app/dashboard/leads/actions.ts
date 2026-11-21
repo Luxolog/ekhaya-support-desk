@@ -11,7 +11,7 @@ export async function createLeadAction(formData: FormData) {
  const enquiryType=String(formData.get('enquiryType')||'general').trim(), interest=String(formData.get('interest')||'').trim(), message=String(formData.get('message')||'').trim(), source=String(formData.get('source')||'manual').trim(), followUp=String(formData.get('followUpAt')||'').trim();
  if(!fullName||(!email&&!phone)) throw new Error('Enter a name and at least one contact method.');
  if(fullName.length>160||email.length>320||phone.length>40||message.length>5000||interest.length>240||source.length>80) throw new Error('A field exceeds its allowed length.');
- if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
+ if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
  const rows=await db`insert into support.leads (workspace_id,full_name,email,phone,enquiry_type,interest,message,source,follow_up_at,consent_status,created_by)
  values (${membership.workspace_id},${fullName},${email||null},${phone||null},${enquiryType},${interest||null},${message||null},${source},${followUp||null},'unknown',${user.id}) returning id`;
  await db`insert into support.lead_events (workspace_id,lead_id,actor_user_id,event_type,details) values (${membership.workspace_id},${rows[0].id},${user.id},'lead_created',jsonb_build_object('source',${source}))`;
