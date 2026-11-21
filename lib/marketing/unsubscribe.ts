@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { db } from '@/lib/db';
+import { getUnsubscribeExpiryDays } from '@/lib/marketing/policy';
 
 type UnsubscribeTokenInput = {
   workspaceId: string;
@@ -11,10 +12,7 @@ type UnsubscribeTokenInput = {
 
 /** Issue a one-time token bound to the exact currently-granted consent event. */
 export async function createUnsubscribeToken(input: UnsubscribeTokenInput) {
-  const days = input.expiresInDays ?? 30;
-  if (!Number.isInteger(days) || days < 1 || days > 90) {
-    throw new Error('Unsubscribe token expiry must be between 1 and 90 days.');
-  }
+  const days = getUnsubscribeExpiryDays(input.expiresInDays);
   const token = randomBytes(32).toString('base64url');
   const tokenHash = createHash('sha256').update(token).digest('hex');
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
