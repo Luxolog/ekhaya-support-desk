@@ -14,6 +14,7 @@ type Customer = { id: string; display_name: string; email: string | null; phone:
 type CampaignPreview = {
   id: string; name: string; channel: string; status: string;
   eligible: number; withdrawn: number; unknown_or_missing: number;
+  eligible_customers: number; withdrawn_customers: number; unknown_or_missing_customers: number;
 };
 
 export default async function ConsentAuditPage() {
@@ -38,7 +39,10 @@ export default async function ConsentAuditPage() {
     db`select c.id, c.name, c.channel, c.status,
           coalesce(p.eligible, 0)::int as eligible,
           coalesce(p.withdrawn, 0)::int as withdrawn,
-          coalesce(p.unknown_or_missing, 0)::int as unknown_or_missing
+          coalesce(p.unknown_or_missing, 0)::int as unknown_or_missing,
+          coalesce(p.eligible_customers, 0)::int as eligible_customers,
+          coalesce(p.withdrawn_customers, 0)::int as withdrawn_customers,
+          coalesce(p.unknown_or_missing_customers, 0)::int as unknown_or_missing_customers
         from support.marketing_campaigns c
         left join lateral (
           with latest as (
@@ -59,7 +63,32 @@ export default async function ConsentAuditPage() {
           from support.leads l
           left join latest on latest.lead_id = l.id
           where l.workspace_id = c.workspace_id and c.channel in ('email','whatsapp','sms')
-        ) p on true
+        ) lead_preview on true
+        left join lateral (
+          with latest as (
+            select distinct on (mc.customer_id) mc.customer_id, mc.consent_status
+            from support.marketing_consents mc
+            where mc.workspace_id = c.workspace_id and mc.channel = c.channel and mc.customer_id is not null
+            order by mc.customer_id, mc.recorded_at desc, mc.id desc
+          )
+          select
+            count(*) filter (where latest.consent_status = 'granted'
+              and ((c.channel = 'email' and nullif(trim(cu.email), '') is not null)
+                or (c.channel in ('whatsapp','sms') and nullif(trim(cu.phone), '') is not null))) as eligible_customers,
+            count(*) filter (where latest.consent_status = 'withdrawn') as withdrawn_customers,
+            count(*) filter (where latest.customer_id is null
+              or (latest.consent_status = 'granted'
+                and ((c.channel = 'email' and nullif(trim(cu.email), '') is null)
+                  or (c.channel in ('whatsapp','sms') and nullif(trim(cu.phone), '') is null)))) as unknown_or_missing_customers
+          from support.customers cu
+          left join latest on latest.customer_id = cu.id
+          where cu.workspace_id = c.workspace_id and c.channel in ('email','whatsapp','sms')
+        ) customer_preview on true
+        cross join lateral (
+          select lead_preview.eligible, lead_preview.withdrawn, lead_preview.unknown_or_missing,
+                 customer_preview.eligible_customers, customer_preview.withdrawn_customers,
+                 customer_preview.unknown_or_missing_customers
+        ) p
         where c.workspace_id = ${membership.workspace_id}
         order by c.created_at desc
         limit 100`,
@@ -80,9 +109,9 @@ export default async function ConsentAuditPage() {
       <div className="mx-auto max-w-6xl space-y-6 px-5 py-7">
         <section className="rounded-xl border bg-white p-5">
           <h2 className="font-semibold">Campaign recipient eligibility preview</h2>
-          <p className="mt-1 text-sm text-slate-500">Counts cover lead records only, using the latest consent event for each lead and campaign channel. Existing customer records are managed separately below.</p>
-          <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-3">Campaign</th><th className="p-3">Channel</th><th className="p-3">Status</th><th className="p-3">Eligible</th><th className="p-3">Withdrawn</th><th className="p-3">Unknown / missing</th></tr></thead><tbody>
-            {campaignRows.map(c => <tr key={c.id} className="border-t"><td className="p-3 font-medium">{c.name}</td><td className="p-3 uppercase">{c.channel}</td><td className="p-3 capitalize">{c.status.replace('_',' ')}</td><td className="p-3 font-semibold text-emerald-700">{c.channel === 'social' ? 'N/A' : c.eligible}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.withdrawn}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.unknown_or_missing}</td></tr>)}
+          <p className="mt-1 text-sm text-slate-500">Counts are split between leads and existing customers. Each uses the latest consent event for that record and campaign channel, and requires a matching email or phone contact.</p>
+          <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-3">Campaign</th><th className="p-3">Channel</th><th className="p-3">Status</th><th className="p-3">Eligible leads</th><th className="p-3">Withdrawn leads</th><th className="p-3">Unknown / missing leads</th><th className="p-3">Eligible customers</th><th className="p-3">Withdrawn customers</th><th className="p-3">Unknown / missing customers</th></tr></thead><tbody>
+            {campaignRows.map(c => <tr key={c.id} className="border-t"><td className="p-3 font-medium">{c.name}</td><td className="p-3 uppercase">{c.channel}</td><td className="p-3 capitalize">{c.status.replace('_',' ')}</td><td className="p-3 font-semibold text-emerald-700">{c.channel === 'social' ? 'N/A' : c.eligible}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.withdrawn}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.unknown_or_missing}</td><td className="p-3 font-semibold text-emerald-700">{c.channel === 'social' ? 'N/A' : c.eligible_customers}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.withdrawn_customers}</td><td className="p-3">{c.channel === 'social' ? 'N/A' : c.unknown_or_missing_customers}</td></tr>)}
           </tbody></table></div>
           {!campaignRows.length && <p className="py-5 text-sm text-slate-500">No campaigns to preview yet.</p>}
           <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">This is a planning snapshot, not send authorization. Recheck consent immediately before any future delivery; delivery remains disabled.</p>
