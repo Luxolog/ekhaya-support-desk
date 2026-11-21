@@ -36,7 +36,9 @@ export async function recordMarketingConsentAction(formData:FormData){
  const {user,membership}=await requireMembership(); if(!['admin','support_agent'].includes(membership.role)) throw new Error('Not permitted.');
  const leadId=String(formData.get('leadId')||''),channel=String(formData.get('channel')||''),consentText=String(formData.get('consentText')||'').trim(),source=String(formData.get('source')||'').trim();
  if(!leadId||!channels.includes(channel)||formData.get('confirmConsent')!=='on'||!consentText||consentText.length>1000||!source||source.length>80) throw new Error('Confirm the person explicitly agreed, and record the consent wording and source.');
- const lead=await db`select id from support.leads where id=${leadId} and workspace_id=${membership.workspace_id} limit 1`; if(!lead.length) throw new Error('Lead not found in this workspace.');
+ const lead=await db`select id,email,phone from support.leads where id=${leadId} and workspace_id=${membership.workspace_id} limit 1`; if(!lead.length) throw new Error('Lead not found in this workspace.');
+ if(channel==='email'&&!lead[0].email) throw new Error('This lead has no email address.');
+ if((channel==='whatsapp'||channel==='sms')&&!lead[0].phone) throw new Error('This lead has no phone number.');
  await db`insert into support.marketing_consents(workspace_id,lead_id,channel,consent_status,consent_text,source,recorded_by) values(${membership.workspace_id},${leadId},${channel},'granted',${consentText},${source},${user.id})`;
  await db`insert into support.lead_events(workspace_id,lead_id,actor_user_id,event_type,details) values(${membership.workspace_id},${leadId},${user.id},'marketing_consent_granted',jsonb_build_object('channel',${channel},'source',${source}))`;
  revalidatePath('/dashboard/leads');
@@ -45,7 +47,10 @@ export async function withdrawMarketingConsentAction(formData:FormData){
  const {user,membership}=await requireMembership(); if(!['admin','support_agent'].includes(membership.role)) throw new Error('Not permitted.');
  const leadId=String(formData.get('leadId')||''),channel=String(formData.get('channel')||''),source=String(formData.get('source')||'staff_recorded').trim();
  if(!leadId||!channels.includes(channel)||!source||source.length>80) throw new Error('Invalid consent withdrawal request.');
- const lead=await db`select id from support.leads where id=${leadId} and workspace_id=${membership.workspace_id} limit 1`; if(!lead.length) throw new Error('Lead not found in this workspace.');
+ const lead=await db`select id,email,phone from support.leads where id=${leadId} and workspace_id=${membership.workspace_id} limit 1`; if(!lead.length) throw new Error('Lead not found in this workspace.');
+ if(channel==='email'&&!lead[0].email) throw new Error('This lead has no email address.');
+ if((channel==='whatsapp'||channel==='sms')&&!lead[0].phone) throw new Error('This lead has no phone number.');
+ const latest=await db`select consent_status from support.marketing_consents where workspace_id=${membership.workspace_id} and lead_id=${leadId} and channel=${channel} order by recorded_at desc,id desc limit 1`; if(latest[0]?.consent_status!=='granted') throw new Error('There is no active consent to withdraw for this channel.');
  await db`insert into support.marketing_consents(workspace_id,lead_id,channel,consent_status,source,recorded_by) values(${membership.workspace_id},${leadId},${channel},'withdrawn',${source},${user.id})`;
  await db`insert into support.lead_events(workspace_id,lead_id,actor_user_id,event_type,details) values(${membership.workspace_id},${leadId},${user.id},'marketing_consent_withdrawn',jsonb_build_object('channel',${channel},'source',${source}))`;
  revalidatePath('/dashboard/leads');
