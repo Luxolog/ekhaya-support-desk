@@ -1,7 +1,7 @@
 name: Support Desk checks
 on:
   push:
-    branches: [main]
+    branches: [main, feature/school-support-marketing-pilot]
   pull_request:
     branches: [main]
   workflow_dispatch:
