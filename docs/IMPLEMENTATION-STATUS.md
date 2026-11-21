@@ -9,6 +9,8 @@ Branch: `feature/school-support-marketing-pilot`
 - Workspace organisation settings, department management and knowledge article drafts/publishing.
 - Campaign drafts and internal admin content approval. Approval is not a send authorization; no message delivery exists.
 - Workspace-scoped reporting for leads, follow-ups, tickets and campaign states.
+- Dedicated consent audit page with append-only event history and staff/source/evidence details.
+- Campaign-level, non-sending recipient eligibility counts based on the latest channel-specific consent event and matching contact field. Withdrawn, unknown and missing-contact leads are excluded.
 - Deterministic mock AI provider foundation; no live AI calls or message sending.
 
 ## Database and deployment
@@ -21,13 +23,14 @@ Branch: `feature/school-support-marketing-pilot`
 - All lead, consent and campaign reads/writes are scoped to the authenticated active workspace.
 - Consent is captured per channel, with the exact consent statement and source stored for audit.
 - Withdrawal is append-only and does not erase the historical grant.
-- Campaign approval is content review only. No recipient selection, export or sending endpoint exists.
+- The consent audit view is staff-only; customer roles are denied.
+- Recipient preview counts use the latest event per lead/channel and require the matching email/phone field. The preview exposes counts only, not recipient contact data.
+- Campaign approval is content review only. No recipient export or sending endpoint exists.
 - Before delivery is implemented, require a final recipient-level consent/suppression check at send time, unsubscribe/opt-out handling, provider configuration, audit logs, rate limits and a human-confirmed recipient preview.
 - Public intake needs anti-abuse controls, validation and a privacy notice before release.
 - POPIA compliance is not claimed; retention, data-subject request processes, operator agreements and organisation-specific legal review remain outstanding.
 
-## Outstanding
-- Consent management for existing customer records and a dedicated consent audit/report view.
-- Recipient-level suppression and send-time revalidation, once a delivery provider is selected.
-- Lead assignment, CSV export, public intake and real provider integrations.
-- End-to-end tests with real staff/customer accounts and a reviewed production migration.
+## Verification and outstanding
+- `docs/CONSENT-SECURITY-TESTS.md` defines two-workspace isolation, role, tampered-ID and consent-state test cases. These are a manual test plan, not completed authenticated end-to-end tests.
+- Lead assignment, CSV export, public intake and real provider integrations remain outstanding.
+- End-to-end tests with real staff/customer accounts and a reviewed production migration remain release blockers.
