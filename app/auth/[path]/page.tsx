@@ -20,7 +20,6 @@ export default async function AuthPage({ params }: { params: Promise<{ path: str
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{signup ? 'Create your workspace' : 'Welcome back'}</h1>
         <p className="mt-2 text-sm text-slate-600">{signup ? 'Set up your support team and start managing customer requests.' : 'Sign in to manage your customer conversations.'}</p>
         <AuthForm mode={signup ? 'sign-up' : 'sign-in'} />
-        <p className="mt-6 text-center text-xs text-slate-400">Secure account access powered by Neon Managed Auth.</p>
       </section>
     </main>
   );
